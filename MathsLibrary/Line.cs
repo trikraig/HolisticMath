@@ -1,71 +1,98 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class Line
 {
-    Coords a, b, vector;
+    public Coords A;
+    Coords B;
+    public Coords v;
 
-    public enum LINETYPE { LINE, SEGMENT, RAY };
+    public enum LINETYPE { LINE, SEGMENT, RAY};
     LINETYPE type;
 
     public Line(Coords _A, Coords _B, LINETYPE _type)
     {
-        a = _A;
-        b = _B;
-        vector = b - a;
+        A = _A;
+        B = _B;
         type = _type;
+        v = new Coords(B.x - A.x, B.y - A.y, B.z - A.z);
     }
 
-    public Line(Coords _A, Coords vector)
+    public Line(Coords _A, Coords _V)
     {
+        A = _A;
+        v = _V;
+        B = _A + v;
         type = LINETYPE.SEGMENT;
-        a = _A;
-        this.vector = vector;
-        b = a + this.vector;
     }
 
-    public Coords Lerp(float t) //t is short for time as time at.
+    public Coords Reflect(Coords normal)
     {
-        //Line t -inf <= t <= inf
-        //Segment 0 <= t <= 1
-        //Ray 0 <= t <= inf
+        //FORMULA 
+        // r = a - 2(a.n)n
+        Coords norm = normal.GetNormal();
+        Coords a = v.GetNormal();
 
-        if (type == LINETYPE.RAY && t < 0)
+        float d = HolisticMath.Dot(norm, a);
+
+        if(d == 0)
         {
-            t = 0;
-        }
-        else if (type == LINETYPE.SEGMENT)
-        {
-            t = Mathf.Clamp(t, 0, 1);
+            //check not parallel
+            return v;
         }
 
-        float xt = a.x + vector.x * t;
-        float yt = a.y + vector.y * t;
-        float zt = a.z + vector.z * t;
-
-        return new Coords(xt, yt, zt);
+        float vn2 = d * 2;
+        Coords r = a - norm * vn2;
+        return r;
     }
 
-    public float IntersectsAt(Line otherLine)
+    public float IntersectsAt(Plane p)
     {
-        if (HolisticMath.Dot(Coords.Perp(otherLine.vector), vector) == 0)
+        Coords normal = HolisticMath.Cross(p.u, p.v);
+        if (HolisticMath.Dot(normal, v) == 0)
+            return float.NaN;
+        float t = HolisticMath.Dot(normal, p.A - A) / HolisticMath.Dot(normal, v);
+        return t;
+    }
+    
+    public float IntersectsAt(Line l)
+    {
+        if(HolisticMath.Dot(Coords.Perp(l.v),v) == 0)
         {
-            //Is parallel, NaN is Not a Number
             return float.NaN;
         }
-        //t is time at which point lines intersect.       
-        //c is vector between both starting points of lines.
-        Coords c = otherLine.a - this.a;
-        float t = HolisticMath.Dot(Coords.Perp(otherLine.vector), c) / HolisticMath.Dot(Coords.Perp(otherLine.vector), this.vector);
-        //t ranges from 0 to 1 on segment, if outside that range, intersect not on the line
-        if ((t < 0 || t > 1) && type == LINETYPE.SEGMENT)
+        Coords c = l.A - this.A;
+        float t = HolisticMath.Dot(Coords.Perp(l.v), c) / HolisticMath.Dot(Coords.Perp(l.v), v);
+        if((t < 0 || t > 1) && type == LINETYPE.SEGMENT)
         {
             return float.NaN;
         }
         return t;
     }
 
+
     public void Draw(float width, Color col)
     {
-        Coords.DrawLine(a, b, width, col);
+        Coords.DrawLine(A, B, width, col);
     }
+
+    public Coords Lerp(float t)
+    {
+        if (type == LINETYPE.SEGMENT)
+            t = Mathf.Clamp(t, 0, 1);
+        else if (type == LINETYPE.RAY && t < 0)
+            t = 0;
+
+        float xt = A.x + v.x * t;
+        float yt = A.y + v.y * t;
+        float zt = A.z + v.z * t;
+
+        return new Coords(xt, yt, zt);
+    }
+
+    //3D Line Intersection Algorithm
+    //http://inis.jinr.ru/sl/vol1/CMC/Graphics_Gems_1,ed_A.Glassner.pdf
+
+
 }

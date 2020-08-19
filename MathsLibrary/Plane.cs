@@ -1,8 +1,14 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class Plane
 {
-    Coords A, B, C, v, u;
+    public Coords A;
+    Coords B;
+    Coords C;
+    public Coords v;
+    public Coords u;
 
     public Plane(Coords _A, Coords _B, Coords _C)
     {
@@ -12,11 +18,12 @@ public class Plane
         v = B - A;
         u = C - A;
     }
+
     public Plane(Coords _A, Vector3 V, Vector3 U)
     {
         A = _A;
-        v = new Coords(V);
-        u = new Coords(U);
+        v = new Coords(V.x, V.y, V.z);
+        u = new Coords(U.x, U.y, U.z);
     }
 
     public Coords Lerp(float s, float t)
@@ -26,6 +33,7 @@ public class Plane
         float zst = A.z + v.z * s + u.z * t;
 
         return new Coords(xst, yst, zst);
-
     }
+   
+
 }
